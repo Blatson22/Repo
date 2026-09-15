@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'config.dart';
 import 'models.dart';
+import 'screens/documento_form_screen.dart';
 import 'screens/documentos_screen.dart';
 import 'screens/reportes_screen.dart';
 
@@ -192,8 +193,8 @@ class _MyAppState extends State<MyApp> {
       ),
       floatingActionButton: _vista == _Vista.lista
           ? FloatingActionButton(
-              tooltip: 'Nuevo producto',
-              onPressed: _nuevo,
+              tooltip: 'Acciones',
+              onPressed: _mostrarMenuAcciones,
               child: const Icon(Icons.add),
             )
           : null,
@@ -241,16 +242,28 @@ class _MyAppState extends State<MyApp> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               IconButton(
-                tooltip: 'Editar',
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => _editar(p),
+                tooltip: 'Vender',
+                icon: const Icon(Icons.point_of_sale),
+                onPressed: () => _abrirDocumento(TiposDocumento.venta, p),
               ),
               IconButton(
-                tooltip: 'Eliminar',
-                icon: const Icon(Icons.delete),
-                onPressed: () async {
-                  await _eliminar(p.id);
+                tooltip: 'Comprar',
+                icon: const Icon(Icons.shopping_cart),
+                onPressed: () => _abrirDocumento(TiposDocumento.compra, p),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Más',
+                onSelected: (v) {
+                  if (v == 'editar') {
+                    _editar(p);
+                  } else if (v == 'eliminar') {
+                    _eliminar(p.id);
+                  }
                 },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'editar', child: Text('Editar')),
+                  const PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+                ],
               ),
             ],
           ),
@@ -259,6 +272,50 @@ class _MyAppState extends State<MyApp> {
       );
     }
     return tiles;
+  }
+
+  /// Abre el formulario de documento con tipo y (opcional) producto.
+  void _abrirDocumento(String tipo, Producto? producto) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DocumentoFormScreen(tipo: tipo, producto: producto),
+      ),
+    ).then((_) => _cargar());
+  }
+
+  /// Muestra el menú de acciones del botón flotante.
+  void _mostrarMenuAcciones() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => _menuAcciones(),
+    );
+  }
+
+  Widget _menuAcciones() {
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: <Widget>[
+        _accion(Icons.inventory_2, 'Nuevo producto', () => _nuevo()),
+        _accion(Icons.shopping_cart, 'Registrar compra',
+            () => _abrirDocumento(TiposDocumento.compra, null)),
+        _accion(Icons.point_of_sale, 'Registrar venta',
+            () => _abrirDocumento(TiposDocumento.venta, null)),
+        _accion(Icons.local_shipping, 'Registrar despacho',
+            () => _abrirDocumento(TiposDocumento.despacho, null)),
+      ],
+    );
+  }
+
+  Widget _accion(IconData icono, String etiqueta, VoidCallback onPressed) {
+    return ListTile(
+      leading: Icon(icono),
+      title: Text(etiqueta),
+      onTap: () {
+        Navigator.pop(context);
+        onPressed();
+      },
+    );
   }
 
   Widget _buildFormulario(BuildContext context) {

@@ -5,7 +5,13 @@ import '../models.dart';
 
 /// Formulario para registrar un documento con varias líneas.
 class DocumentoFormScreen extends StatefulWidget {
-  const DocumentoFormScreen({super.key});
+  /// Tipo inicial del documento (compra/venta/despacho/ajuste).
+  final String? tipo;
+
+  /// Si se indica, la primera línea arranca con este producto preseleccionado.
+  final Producto? producto;
+
+  const DocumentoFormScreen({super.key, this.tipo, this.producto});
 
   @override
   State<DocumentoFormScreen> createState() => _DocumentoFormScreenState();
@@ -26,11 +32,22 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
   bool _cargando = true;
   String _error = '';
   List<Producto> _productos = [];
+  bool _tipoFijado = false;
   final List<_LineaDraft> _lineas = [_LineaDraft()];
 
   @override
   void initState() {
     super.initState();
+    final tipo = widget.tipo;
+    final productoInicial = widget.producto;
+    if (tipo != null) {
+      _tipo = tipo;
+      _tipoFijado = true;
+    }
+    if (productoInicial != null) {
+      _lineas[0].producto = productoInicial;
+      _lineas[0].precio = productoInicial.precio;
+    }
     _cargarProductos();
   }
 
@@ -149,15 +166,30 @@ class _DocumentoFormScreenState extends State<DocumentoFormScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        DropdownButtonFormField<String>(
-          initialValue: _tipo,
-          decoration: const InputDecoration(labelText: 'Tipo de documento'),
-          items: TiposDocumento.lista
-              .map((t) =>
-                  DropdownMenuItem(value: t, child: Text(TiposDocumento.etiqueta(t))))
-              .toList(),
-          onChanged: (v) => setState(() => _tipo = v!),
-        ),
+        if (_tipoFijado)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.receipt_long),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Tipo: ${TiposDocumento.etiqueta(_tipo)}',
+                      style: const TextStyle(fontSize: 16)),
+                ),
+              ],
+            ),
+          )
+        else
+          DropdownButtonFormField<String>(
+            initialValue: _tipo,
+            decoration: const InputDecoration(labelText: 'Tipo de documento'),
+            items: TiposDocumento.lista
+                .map((t) =>
+                    DropdownMenuItem(value: t, child: Text(TiposDocumento.etiqueta(t))))
+                .toList(),
+            onChanged: (v) => setState(() => _tipo = v!),
+          ),
         const SizedBox(height: 12),
         TextField(
           controller: _folio,
