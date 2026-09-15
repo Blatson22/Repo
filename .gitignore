@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Backend build artifacts
+Backend/build/
+Backend/dist/
+Backend/*.spec
+
+# Base de datos SQLite (datos, no código)
+Backend/inventario.db
