@@ -14,15 +14,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import models
 from database import Base, engine
-from routers import productos
+from routers import documentos, exportar, productos, reportes
 
 # Crea las tablas si no existen.
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="API de Inventario",
-    description="CRUD de productos para la app de inventario.",
-    version="1.0.0",
+    description="CRUD de productos, documentos (compras/ventas/despachos) y reportes.",
+    version="1.1.0",
 )
 
 # CORS abierto: la app Flutter puede correr en distintos orígenes
@@ -36,6 +36,9 @@ app.add_middleware(
 )
 
 app.include_router(productos.router)
+app.include_router(documentos.router)
+app.include_router(reportes.router)
+app.include_router(exportar.router)
 
 
 @app.get("/")
@@ -43,7 +46,12 @@ def raiz():
     return {
         "aplicacion": "API de Inventario",
         "docs": "/docs",
-        "endpoints": ["/api/v1/productos"],
+        "endpoints": [
+            "/api/v1/productos",
+            "/api/v1/documentos",
+            "/api/v1/reportes",
+            "/api/v1/exportar/reportes",
+        ],
     }
 
 

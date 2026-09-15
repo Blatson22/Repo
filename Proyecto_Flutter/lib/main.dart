@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'config.dart';
 import 'models.dart';
+import 'screens/documentos_screen.dart';
+import 'screens/reportes_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -164,6 +166,26 @@ class _MyAppState extends State<MyApp> {
             icon: const Icon(Icons.refresh),
             onPressed: () async {
               await _cargar();
+            },
+          ),
+          IconButton(
+            tooltip: 'Documentos (compras/ventas/despachos)',
+            icon: const Icon(Icons.receipt_long),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DocumentosScreen()),
+              ).then((_) => _cargar());
+            },
+          ),
+          IconButton(
+            tooltip: 'Reportes',
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportesScreen()),
+              ).then((_) => _cargar());
             },
           ),
         ],
