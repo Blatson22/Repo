@@ -12,5 +12,4 @@ library;
 
 /// URL ACTUAL del backend desplegado en Render (Web Service).
 /// Funciona desde cualquier lugar con internet.
-/// Si en Render el servicio se llama distinto a `inventario-api`, ajusta aquí.
-const String apiBaseUrl = 'https://inventario-api.onrender.com';
+const String apiBaseUrl = 'https://inventario-api-z6a9.onrender.com';

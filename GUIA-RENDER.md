@@ -76,8 +76,8 @@ Render crea automáticamente el Web Service y la base, e inyecta la variable
 
   | Ruta | Qué esperas |
   |------|-------------|
-  | `https://inventario-api.onrender.com/health` | `{"estado":"ok"}` |
-  | `https://inventario-api.onrender.com/docs` | Documentación Swagger interactiva |
+  | `https://inventario-api-z6a9.onrender.com/health` | `{"estado":"ok"}` |
+  | `https://inventario-api-z6a9.onrender.com/docs` | Documentación Swagger interactiva |
 
 - Dentro de `/docs` puedes probar el endpoint de importación:
   **POST `/api/v1/productos/importar`** (sube un `.xlsx`) y
@@ -91,7 +91,7 @@ Render crea automáticamente el Web Service y la base, e inyecta la variable
 2. La variable quedaría así (ajújala si tu Web Service se llama distinto):
 
    ```dart
-   const String apiBaseUrl = 'https://inventario-api.onrender.com';
+   const String apiBaseUrl = 'https://inventario-api-z6a9.onrender.com';
    ```
 
 3. Recompila y relanza la app. Ahora consume la API desde la nube.
