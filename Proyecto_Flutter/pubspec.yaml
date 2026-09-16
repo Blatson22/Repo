@@ -37,6 +37,7 @@ dependencies:
   http: ^1.6.0
   share_plus: ^10.1.4
   path_provider: ^2.1.5
+  file_picker: 8.1.6
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +49,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+# file_picker (>=8.1.6) arrastra flutter_plugin_android_lifecycle 2.0.35, que
+# exige compileSdk 36 aunque el plugin en sí compila contra SDK 34. Forzamos una
+# versión más antigua del paquete transitivo para evitar el fallo de build.
+dependency_overrides:
+  flutter_plugin_android_lifecycle: 2.0.21
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

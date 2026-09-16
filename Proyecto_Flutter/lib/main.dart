@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'api.dart';
 import 'config.dart';
@@ -313,7 +314,85 @@ class _MyAppState extends State<MyApp> {
             () => _abrirDocumento(TiposDocumento.venta, null)),
         _accion(Icons.local_shipping, 'Registrar despacho',
             () => _abrirDocumento(TiposDocumento.despacho, null)),
+        const Divider(height: 1),
+        _accion(Icons.upload_file, 'Importar inventario (Excel)',
+            () => _importarInventario()),
+        _accion(Icons.help_outline, 'Plantilla (columnas)',
+            () => _mostrarColumnasPlantilla()),
       ],
+    );
+  }
+
+  /// Importa inventario desde un archivo Excel.
+  Future<void> _importarInventario() async {
+    try {
+      final resultado = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        withData: false,
+      );
+      if (resultado == null || resultado.files.isEmpty) return; // canceló
+      final ruta = resultado.files.single.path;
+      if (ruta == null) return;
+
+      _mensaje = 'Importando…';
+      final resp = await _api.importarInventario(ruta);
+      await _cargar();
+
+      if (!mounted) return;
+      final textoErrores = resp.errores.isEmpty
+          ? 'Sin errores.'
+          : resp.errores
+              .map((e) => 'Fila ${e.fila}: ${e.error}')
+              .join('\n');
+      showDialog<void>(
+        context: _navigatorKey.currentContext!,
+        builder: (_) => AlertDialog(
+          title: const Text('Resultado de la importación'),
+          content: SingleChildScrollView(
+            child: Text(
+              '${resp.importados} de ${resp.totalFilas} producto(s) importados.\n\n'
+              'Errores:\n$textoErrores',
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => _navigatorKey.currentState!.pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() =>
+            _mensaje = 'No se pudo importar el inventario: $e');
+      }
+    }
+  }
+
+  /// Muestra el diálogo con las columnas esperadas en la plantilla.
+  void _mostrarColumnasPlantilla() {
+    showDialog<void>(
+      context: _navigatorKey.currentContext!,
+      builder: (_) => AlertDialog(
+        title: const Text('Plantilla de inventario (.xlsx)'),
+        content: const Text(
+          'La primera fila del archivo debe contener estas columnas:\n\n'
+          '  • Nombre (obligatorio)\n'
+          '  • Precio (≥ 0)\n'
+          '  • Stock (≥ 0, entero)\n'
+          '  • Categoria (opcional)\n'
+          '  • Descripcion (opcional)\n\n'
+          'Si un producto ya existe con el mismo nombre, se actualizan sus datos.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => _navigatorKey.currentState!.pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
     );
   }
 

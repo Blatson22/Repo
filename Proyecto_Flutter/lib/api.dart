@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -161,6 +162,23 @@ class ApiService {
     final resp = await _client.get(_uriQuery('/api/v1/exportar/reportes', params));
     _verificar(resp);
     return resp.bodyBytes;
+  }
+
+  /// Importa un inventario desde un archivo Excel (.xlsx).
+  Future<ResultadoImportacion> importarInventario(String rutaArchivo) async {
+    final archivo = File(rutaArchivo);
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/v1/productos/importar'),
+    );
+    request.files.add(
+      await http.MultipartFile.fromPath('file', archivo.path),
+    );
+    final streamed = await request.send();
+    final resp = await http.Response.fromStream(streamed);
+    _verificar(resp);
+    return ResultadoImportacion.fromJson(
+        jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>);
   }
 
   void _verificar(http.Response resp) {

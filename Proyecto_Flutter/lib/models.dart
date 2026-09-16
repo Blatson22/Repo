@@ -304,3 +304,38 @@ class ExistenciaReporte {
         valor: (j['valor'] as num? ?? 0).toDouble(),
       );
 }
+
+/// Error por fila durante la importación de inventario.
+class ErrorImportacion {
+  final int fila;
+  final String error;
+
+  const ErrorImportacion({required this.fila, required this.error});
+
+  factory ErrorImportacion.fromJson(Map<String, dynamic> j) => ErrorImportacion(
+        fila: (j['fila'] as num).toInt(),
+        error: j['error'] as String? ?? '',
+      );
+}
+
+/// Resultado de importar un archivo Excel de inventario.
+class ResultadoImportacion {
+  final int importados;
+  final List<ErrorImportacion> errores;
+  final int totalFilas;
+
+  const ResultadoImportacion({
+    required this.importados,
+    required this.errores,
+    required this.totalFilas,
+  });
+
+  factory ResultadoImportacion.fromJson(Map<String, dynamic> j) =>
+      ResultadoImportacion(
+        importados: (j['importados'] as num? ?? 0).toInt(),
+        totalFilas: (j['total_filas'] as num? ?? 0).toInt(),
+        errores: ((j['errores'] as List? ?? [])
+                .map((e) => ErrorImportacion.fromJson(e as Map<String, dynamic>))
+                .toList()),
+      );
+}
