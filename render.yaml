@@ -24,7 +24,7 @@ services:
           name: inventario-db
           property: connectionString
 
+databases:
   # ---- Base de datos PostgreSQL gestionada ----
-  - type: postgres
-    name: inventario-db
+  - name: inventario-db
     plan: free

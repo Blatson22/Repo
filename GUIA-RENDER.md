@@ -7,6 +7,11 @@ frontend Flutter.
 El repositorio ya incluye un archivo `render.yaml` (BluePrint) que hace casi
 todo automático. Recomendado usar ese método.
 
+> Nota sobre el `render.yaml`: en la especificación de Blueprints de Render, la
+> base de datos PostgreSQL se declara en la lista raíz `databases:` (NO como un
+> servicio con `type: postgres`). Si usas la versión anterior con
+> `type: postgres`, Render muestra el error *unknown type "postgres"*.
+
 ---
 
 ## 0. Requisitos previos
