@@ -26,6 +26,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final ApiService _api = ApiService();
+  // Clave global del Navigator: la usamos para navegar/mostrar diálogos
+  // porque el `context` de este State (MyApp) está POR ENCIMA del
+  // MaterialApp que construye, así que no tiene Navigator ni
+  // MaterialLocalizations. Usar navigatorKey.currentState/currentContext
+  // sí nos da un contexto válido dentro del árbol del MaterialApp.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   late var _productos = <Producto>[];
   _Vista _vista = _Vista.lista;
   String _mensaje = '';
@@ -152,6 +158,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Inventario',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
@@ -173,20 +180,22 @@ class _MyAppState extends State<MyApp> {
             tooltip: 'Documentos (compras/ventas/despachos)',
             icon: const Icon(Icons.receipt_long),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DocumentosScreen()),
-              ).then((_) => _cargar());
+              _navigatorKey.currentState!
+                  .push(
+                    MaterialPageRoute(builder: (_) => const DocumentosScreen()),
+                  )
+                  .then((_) => _cargar());
             },
           ),
           IconButton(
             tooltip: 'Reportes',
             icon: const Icon(Icons.bar_chart),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReportesScreen()),
-              ).then((_) => _cargar());
+              _navigatorKey.currentState!
+                  .push(
+                    MaterialPageRoute(builder: (_) => const ReportesScreen()),
+                  )
+                  .then((_) => _cargar());
             },
           ),
         ],
@@ -276,18 +285,19 @@ class _MyAppState extends State<MyApp> {
 
   /// Abre el formulario de documento con tipo y (opcional) producto.
   void _abrirDocumento(String tipo, Producto? producto) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DocumentoFormScreen(tipo: tipo, producto: producto),
-      ),
-    ).then((_) => _cargar());
+    _navigatorKey.currentState!
+        .push(
+          MaterialPageRoute(
+            builder: (_) => DocumentoFormScreen(tipo: tipo, producto: producto),
+          ),
+        )
+        .then((_) => _cargar());
   }
 
   /// Muestra el menú de acciones del botón flotante.
   void _mostrarMenuAcciones() {
     showModalBottomSheet(
-      context: context,
+      context: _navigatorKey.currentContext!,
       builder: (_) => _menuAcciones(),
     );
   }
@@ -312,7 +322,7 @@ class _MyAppState extends State<MyApp> {
       leading: Icon(icono),
       title: Text(etiqueta),
       onTap: () {
-        Navigator.pop(context);
+        _navigatorKey.currentState!.pop();
         onPressed();
       },
     );
