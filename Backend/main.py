@@ -6,6 +6,7 @@ Ejecutar con:
 El servidor escucha en 0.0.0.0:8000 para aceptar conexiones externas
 (PC de gama baja en LAN, o túnel cloudflared/ngrok).
 """
+import os
 import sys
 
 import uvicorn
@@ -64,4 +65,6 @@ if __name__ == "__main__":
     # En modo congelado (PyInstaller) no usamos el recargador: debe correr
     # como un único proceso estable (adecuado para servicio de Windows).
     congelado = getattr(sys, "frozen", False)
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=not congelado)
+    # Render asigna el puerto mediante la variable de entorno PORT.
+    puerto = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=puerto, reload=not congelado)

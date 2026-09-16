@@ -153,3 +153,14 @@ class ExistenciaReporte(BaseModel):
     stock: int
     precio: float
     valor: float
+
+
+class ImportarError(BaseModel):
+    fila: int
+    error: str
+
+
+class ProductoImportarResultado(BaseModel):
+    importados: int
+    errores: List[ImportarError]
+    total_filas: int

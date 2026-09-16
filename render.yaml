@@ -1,0 +1,30 @@
+# Configuración de despliegue en Render (servicio web + PostgreSQL).
+# Referencia: https://render.com/docs/blueprint-spec
+#
+# Uso en Render:
+#   1. New + -> Blueprint
+#   2. Conecta el repositorio GitHub Blatson22/Repo
+#   3. Selecciona la rama `main`
+#   Render crea automáticamente el Web Service y la base PostgreSQL,
+#   e inyecta la variable DATABASE_URL en el servicio.
+
+services:
+  # ---- API FastAPI (Web Service) ----
+  - type: web
+    name: inventario-api
+    runtime: python
+    plan: free
+    rootDir: Backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventario-db
+          property: connectionString
+
+  # ---- Base de datos PostgreSQL gestionada ----
+  - type: postgres
+    name: inventario-db
+    plan: free

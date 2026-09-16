@@ -10,8 +10,7 @@ library;
 ///
 /// La URL debe terminar SIN barra al final (ej. `.../8000`, no `.../8000/`).
 
-/// URL ACTUAL del backend desplegado (túnel público de cloudflared hacia la
-/// PC de gama baja). Funciona desde cualquier lugar con internet.
-/// Nota: los enlaces `*.trycloudflare.com` son temporales (duran mientras el
-/// túnel esté abierto). Si el túnel cambia, actualiza aquí la URL.
-const String apiBaseUrl = 'https://proven-tip-scale-arrangements.trycloudflare.com';
+/// URL ACTUAL del backend desplegado en Render (Web Service).
+/// Funciona desde cualquier lugar con internet.
+/// Si en Render el servicio se llama distinto a `inventario-api`, ajusta aquí.
+const String apiBaseUrl = 'https://inventario-api.onrender.com';
