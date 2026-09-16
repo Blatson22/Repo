@@ -28,6 +28,18 @@ class Producto {
 
   /// Representación amigable de las existencias.
   String get stockTexto => stock == 0 ? 'sin stock' : 'stock: $stock';
+
+  // Comparamos por `id` en vez de identidad de objeto. Esto es necesario
+  // porque, por ejemplo, `DropdownButtonFormField<Producto>` compara su
+  // `initialValue` contra los `items` cargados por separado; sin estos
+  // overrides, dos `Producto` con el mismo id pero de distinta instancia
+  // (uno de la lista principal y otro recién descargado de la API) se
+  // consideran "diferentes" y el dropdown falla al no encontrar coincidencia.
+  @override
+  bool operator ==(Object other) => other is Producto && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 /// Tipos de documento admitidos.
