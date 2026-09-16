@@ -14,4 +14,4 @@ library;
 /// PC de gama baja). Funciona desde cualquier lugar con internet.
 /// Nota: los enlaces `*.trycloudflare.com` son temporales (duran mientras el
 /// túnel esté abierto). Si el túnel cambia, actualiza aquí la URL.
-const String apiBaseUrl = 'https://crucial-ferrari-bra-processor.trycloudflare.com';
+const String apiBaseUrl = 'https://proven-tip-scale-arrangements.trycloudflare.com';
