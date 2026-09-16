@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -37,6 +39,12 @@ class _MyAppState extends State<MyApp> {
   _Vista _vista = _Vista.lista;
   String _mensaje = '';
 
+  // Buscador de la pantalla de inventario.
+  final _busqueda = TextEditingController();
+  String _terminoBusqueda = '';
+  Timer? _debounceBusqueda;
+  bool _buscando = false;
+
   // Controladores de texto del formulario.
   final _nombre = TextEditingController();
   final _descripcion = TextEditingController();
@@ -51,25 +59,53 @@ class _MyAppState extends State<MyApp> {
     _cargar();
   }
 
-  /// Descarga la lista de productos del servidor.
+  @override
+  void dispose() {
+    _debounceBusqueda?.cancel();
+    _busqueda.dispose();
+    super.dispose();
+  }
+
+  /// Descarga la lista de productos del servidor (con búsqueda opcional).
   Future<void> _cargar() async {
     try {
-      final lista = await _api.listar(buscar: null);
+      final lista = await _api.listar(buscar: _terminoBusqueda);
       if (mounted) {
         setState(() {
           _productos = lista;
-          _mensaje = '${lista.length} producto(s)';
+          _buscando = false;
+          if (_terminoBusqueda.trim().isEmpty) {
+            _mensaje = '${lista.length} producto(s)';
+          } else {
+            _mensaje = '${lista.length} resultado(s) para "${_terminoBusqueda.trim()}"';
+          }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
+          _buscando = false;
           _mensaje = 'No se pudo conectar con la API.\n'
               'Asegúrate de que el backend esté corriendo en $apiBaseUrl\n'
               '($e)';
         });
       }
     }
+  }
+
+  /// Dispara la recarga con un retardo (debounce) mientras se escribe.
+  void _onBuscarCambio(String texto) {
+    _debounceBusqueda?.cancel();
+    setState(() => _buscando = true);
+    final termino = texto.trim();
+    _debounceBusqueda = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _terminoBusqueda = termino;
+        });
+        _cargar();
+      }
+    });
   }
 
   /// Prepara el formulario para crear un producto nuevo.
@@ -167,9 +203,40 @@ class _MyAppState extends State<MyApp> {
       ),
       home: Scaffold(
       appBar: AppBar(
-        title: const Text('Inventario'),
-        centerTitle: true,
+        title: TextField(
+          controller: _busqueda,
+          onChanged: _onBuscarCambio,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: 'Buscar producto…',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _busqueda.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Limpiar',
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _busqueda.clear();
+                      _onBuscarCambio('');
+                    },
+                  ),
+            border: InputBorder.none,
+            isDense: true,
+          ),
+        ),
+        centerTitle: false,
         actions: <Widget>[
+          if (_buscando)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
           IconButton(
             tooltip: 'Recargar',
             icon: const Icon(Icons.refresh),
