@@ -339,3 +339,35 @@ class ResultadoImportacion {
                 .toList()),
       );
 }
+
+/// Vista previa de importación: encabezados, mapeo propuesto y muestras.
+class PreviewImportacion {
+  final List<String> encabezados;
+  final Map<String, String?> mapeo;
+  final List<List<dynamic>> muestras;
+
+  const PreviewImportacion({
+    required this.encabezados,
+    required this.mapeo,
+    required this.muestras,
+  });
+
+  factory PreviewImportacion.fromJson(Map<String, dynamic> j) {
+    const campos = ['nombre', 'precio', 'stock', 'categoria', 'descripcion', 'codigo'];
+    final mapaRaw = j['mapeo'] as Map<String, dynamic>? ?? {};
+    final mapeo = <String, String?>{};
+    mapaRaw.forEach((k, v) {
+      final c = v as String?;
+      mapeo[k] = (c != null && campos.contains(c)) ? c : null;
+    });
+    return PreviewImportacion(
+      encabezados: (j['encabezados'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      mapeo: mapeo,
+      muestras: (j['muestras'] as List? ?? [])
+          .map((e) => (e as List).toList())
+          .toList(),
+    );
+  }
+}

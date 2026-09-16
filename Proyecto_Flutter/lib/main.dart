@@ -323,7 +323,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  /// Importa inventario desde un archivo Excel.
+  /// Importa inventario desde un archivo Excel (preview + confirmar mapeo + commit).
   Future<void> _importarInventario() async {
     try {
       final resultado = await FilePicker.platform.pickFiles(
@@ -335,8 +335,20 @@ class _MyAppState extends State<MyApp> {
       final ruta = resultado.files.single.path;
       if (ruta == null) return;
 
-      _mensaje = 'Importando…';
-      final resp = await _api.importarInventario(ruta);
+      _mensaje = 'Analizando el archivo…';
+      final preview = await _api.importarPreview(ruta);
+
+      // Si el backend devolvió un mapeo fallido, avisa y da opción a fallback.
+      if (preview.mapeo.values.any((v) => v == null) && !preview.mapeo.containsValue('nombre')) {
+        _mostrarErrorPreview(preview);
+        return;
+      }
+
+      final mapeoConfirmado = await _mostrarDialogoMapeo(preview);
+      if (mapeoConfirmado == null) return; // canceló el mapeo
+
+      _mensaje = 'Importando productos…';
+      final resp = await _api.importarCommit(ruta, mapeoConfirmado);
       await _cargar();
 
       if (!mounted) return;
@@ -369,6 +381,131 @@ class _MyAppState extends State<MyApp> {
             _mensaje = 'No se pudo importar el inventario: $e');
       }
     }
+  }
+
+  void _mostrarErrorPreview(PreviewImportacion preview) {
+    final detalle = preview.mapeo['_error'] ?? 'No se pudo interpretar el archivo.';
+    showDialog<void>(
+      context: _navigatorKey.currentContext!,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Error al analizar'),
+        content: Text(detalle),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => _navigatorKey.currentState!.pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Muestra un diálogo con el mapeo propuesto (editable) y devuelve el mapeo.
+  Future<Map<String, String?>?> _mostrarDialogoMapeo(
+      PreviewImportacion preview) async {
+    final camposDestino = <String, String?>{
+      for (final c in preview.mapeo.keys) c: preview.mapeo[c],
+    };
+    // Opciones canónicas disponibles.
+    const opciones = <DropdownMenuItem<String>>[
+      DropdownMenuItem(value: 'nombre', child: Text('Nombre')),
+      DropdownMenuItem(value: 'precio', child: Text('Precio')),
+      DropdownMenuItem(value: 'stock', child: Text('Stock')),
+      DropdownMenuItem(value: 'categoria', child: Text('Categoría')),
+      DropdownMenuItem(value: 'descripcion', child: Text('Descripción')),
+      DropdownMenuItem(value: 'codigo', child: Text('Código')),
+    ];
+
+    return showDialog<Map<String, String?>>(
+      context: _navigatorKey.currentContext!,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          String cambiaCampo(String? campo) =>
+              const {
+                'nombre': 'Nombre',
+                'precio': 'Precio',
+                'stock': 'Stock',
+                'categoria': 'Categoría',
+                'descripcion': 'Descripción',
+                'codigo': 'Código',
+              }[campo] ??
+              '—';
+
+          return AlertDialog(
+            title: const Text('Confirma el mapeo de columnas'),
+            content: SizedBox(
+              width: 420,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  const Text(
+                      'Usa los menús para decirle al sistema qué significa cada '
+                      'columna de tu archivo:'),
+                  const SizedBox(height: 8),
+                  if (preview.mapeo.keys.isNotEmpty)
+                    for (final col in camposDestino.keys)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(col, style: const TextStyle(fontWeight: FontWeight.bold))),
+                            const SizedBox(width: 8),
+                            DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: camposDestino[col] ?? 'ignorar',
+                                isDense: true,
+                                items: [
+                                  const DropdownMenuItem(
+                                      value: 'ignorar', child: Text('Ignorar')),
+                                  ...opciones,
+                                ],
+                                onChanged: (v) => setDlg(() {
+                                  camposDestino[col] =
+                                      (v == null || v == 'ignorar') ? null : v;
+                                }),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                  else
+                    const Text('No se detectaron columnas.'),
+                  const SizedBox(height: 8),
+                  if (preview.muestras.isNotEmpty) ...[
+                    const Divider(),
+                    Text(
+                      'Vista previa (según el mapeo):',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                    ),
+                    const SizedBox(height: 4),
+                    for (final fila in preview.muestras) ...[
+                      Text(
+                        preview.encabezados.asMap().entries
+                            .where((e) => camposDestino[e.value] != null)
+                            .map((e) => '${cambiaCampo(camposDestino[e.value])}: ${fila.length > e.key ? fila[e.key] : ''}')
+                            .join('  ·  '),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 2),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => _navigatorKey.currentState!.pop(),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => _navigatorKey.currentState!.pop(camposDestino),
+                child: const Text('Importar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   /// Muestra el diálogo con las columnas esperadas en la plantilla.

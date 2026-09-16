@@ -181,6 +181,42 @@ class ApiService {
         jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>);
   }
 
+  /// Pide al backend un mapeo de columnas al esquema canónico (usa IA).
+  Future<PreviewImportacion> importarPreview(String rutaArchivo) async {
+    final archivo = File(rutaArchivo);
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/v1/productos/import/preview'),
+    );
+    request.files.add(
+      await http.MultipartFile.fromPath('file', archivo.path),
+    );
+    final streamed = await request.send();
+    final resp = await http.Response.fromStream(streamed);
+    _verificar(resp);
+    return PreviewImportacion.fromJson(
+        jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>);
+  }
+
+  /// Importa el archivo usando el mapeo que el usuario confirmó/ajustó.
+  Future<ResultadoImportacion> importarCommit(
+      String rutaArchivo, Map<String, String?> mapeo) async {
+    final archivo = File(rutaArchivo);
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/v1/productos/import/commit'),
+    );
+    request.files.add(
+      await http.MultipartFile.fromPath('file', archivo.path),
+    );
+    request.fields['mapeo'] = jsonEncode(mapeo);
+    final streamed = await request.send();
+    final resp = await http.Response.fromStream(streamed);
+    _verificar(resp);
+    return ResultadoImportacion.fromJson(
+        jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>);
+  }
+
   void _verificar(http.Response resp) {
     if (resp.statusCode >= 400) {
       throw StateError('Error HTTP ${resp.statusCode}: ${utf8.decode(resp.bodyBytes)}');

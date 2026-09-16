@@ -67,6 +67,21 @@ Render crea automáticamente el Web Service y la base, e inyecta la variable
 > Usa la **Internal**, no la *Public*, porque ambos recursos viven en la red
 > privada de Render. La base se crea **vacía** a propósito.
 
+### 2.4 (Opcional pero recomendado) Activar el mapeo inteligente por IA
+
+Para que la importación de Excel use Gemini para mapear columnas con nombres
+libres (ej. el Excel de un proveedor que trae `PRODUCTO`, `PRECIO UNITARIO
+VENTA`, etc.), agrega en el mismo **Environment** del Web Service:
+
+- **Key:** `GOOGLE_API_KEY` · **Value:** tu API key de Google AI Studio
+  (<https://aistudio.google.com/apikey>).
+- **Key:** `GOOGLE_AI_MODEL` · **Value:** `gemini-flash-lite-latest`
+  (opcional; por defecto usa ese modelo).
+
+> Si no pones `GOOGLE_API_KEY`, la importación sigue funcionando pero solo
+> reconoce las columnas con nombre exacto (a la antigua). No guardes la key en
+> el código ni en el repo.
+
 ---
 
 ## 3. Comprobar que funciona

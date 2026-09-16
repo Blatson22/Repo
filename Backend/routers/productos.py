@@ -2,10 +2,11 @@
 import io
 from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+import ia_import
 import models
 import schemas
 from database import get_db
@@ -124,6 +125,15 @@ def importar_inventario(
             detail=f"Faltan las columnas: {', '.join(faltantes)}",
         )
 
+    return _guardar_desde_mapa(mapa=mapa, filas=filas, db=db)
+
+
+def _guardar_desde_mapa(mapa: dict, filas, db: Session) -> schemas.ProductoImportarResultado:
+    """Inserta/actualiza productos usando el mapeo columna->índice.
+
+    `mapa`: dict con clave = campo canónico y valor = índice de la columna.
+    `filas`: iterable de filas (de openpyxl, ya sin encabezado).
+    """
     importados = 0
     errores = []
     total_filas = 0
@@ -146,8 +156,8 @@ def importar_inventario(
             if stock < 0:
                 raise ValueError("Stock negativo")
 
-            categoria = _texto_opcional(fila[mapa["categoria"]])
-            descripcion = _texto_opcional(fila[mapa["descripcion"]])
+            categoria = _texto_opcional(fila[mapa["categoria"]]) if "categoria" in mapa else ""
+            descripcion = _texto_opcional(fila[mapa["descripcion"]]) if "descripcion" in mapa else ""
 
             # Upsert por nombre.
             producto = (
@@ -181,6 +191,122 @@ def importar_inventario(
         errores=errores,
         total_filas=total_filas,
     )
+
+
+def _leer_libro(contenido: bytes):
+    """Carga el primer libro activo y devuelve (encabezados, filas)."""
+    from openpyxl import load_workbook
+
+    try:
+        wb = load_workbook(io.BytesIO(contenido), read_only=True, data_only=True)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No se pudo leer el archivo: {e}",
+        )
+    ws = wb.active
+    filas = ws.iter_rows(values_only=True)
+    try:
+        encabezados = next(filas)
+    except StopIteration:
+        encabezados = ()
+    if not encabezados:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo está vacío (sin encabezados)",
+        )
+    return wb, ws, encabezados, filas
+
+
+def _exigir_xlsx(file: UploadFile):
+    nombre_archivo = (file.filename or "").lower()
+    if not nombre_archivo.endswith((".xlsx", ".xlsm")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo debe ser .xlsx o .xlsm",
+        )
+
+
+@router.post("/import/preview")
+def importar_preview(file: UploadFile = File(...)):
+    """Lee el archivo y propone un mapeo de columnas al esquema canónico.
+
+    Si la IA está configurada (GOOGLE_API_KEY) usa Gemini para mapear;
+    en caso contrario devuelve un mapeo por coincidencia de nombre exacto.
+    """
+    _exigir_xlsx(file)
+    contenido = file.file.read()
+    _wb, _ws, encabezados, filas = _leer_libro(contenido)
+
+    # Muestra de hasta 3 filas para que la IA deduzca el tipo de cada columna.
+    muestras = []
+    for fila in filas:
+        muestras.append(list(fila))
+        if len(muestras) >= 3:
+            break
+
+    mapeo = {}
+    if ia_import.cargar_ia():
+        try:
+            mapeo = ia_import.mapear_columnas(encabezados, muestras)
+        except Exception as e:  # noqa: BLE001
+            mapeo = {"_error": f"No se pudo mapear con IA: {e}"}
+    else:
+        # Fallback: coincidencia por nombre normalizado.
+        for idx, col in enumerate(encabezados):
+            clave = _normalizar(col).lower().replace(" ", "")
+            if clave in COLUMNAS_IMPORTACION:
+                mapeo[col] = clave
+
+    return {
+        "encabezados": [str(c) for c in encabezados if str(c).strip() != ""],
+        "mapeo": mapeo,
+        "muestras": muestras,
+    }
+
+
+@router.post(
+    "/import/commit",
+    response_model=schemas.ProductoImportarResultado,
+)
+def importar_commit(
+    file: UploadFile = File(...),
+    mapeo: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Importa usando el mapeo columna->campo canónico (confirmado por el usuario).
+
+    `mapeo` es un JSON tipo {"ENCABEZADO": "nombre", ...}.
+    """
+    import json as _json
+
+    _exigir_xlsx(file)
+    try:
+        mapeo_aux = _json.loads(mapeo)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"mapeo no es un JSON válido: {e}",
+        )
+
+    contenido = file.file.read()
+    wb, _ws, encabezados, filas = _leer_libro(contenido)
+
+    # Interpretar mapeo: campo canónico -> índice de columna.
+    indices = {}
+    for idx, col in enumerate(encabezados):
+        campo = mapeo_aux.get(str(col))
+        if campo in COLUMNAS_IMPORTACION:
+            indices[campo] = idx
+
+    faltantes = [c for c in ("nombre", "precio", "stock") if c not in indices]
+    if faltantes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"El mapeo no cubre los campos obligatorios: {', '.join(faltantes)}",
+        )
+
+    return _guardar_desde_mapa(mapa=indices, filas=filas, db=db)
 
 
 @router.get("", response_model=List[schemas.ProductoOut])
